@@ -6,30 +6,44 @@ interface TaskListProps {
   updateTask: (task: Task) => void;
 }
 
-const sortTasks = (tasks: Task[]) => {
-  tasks.sort(
-    (a, b) =>
-      (a.dueDate ? new Date(a.dueDate).getTime() : 0) -
-      (b.dueDate ? new Date(b.dueDate).getTime() : 0)
-  );
+export const sortTasks = (tasks: Task[]): Task[] => {
+  // Create a copy of tasks to avoid mutating the original array
+  const tasksCopy = [...tasks];
+  const now = new Date();
 
-  const pastDueTasks: Task[] = [];
-  const incompleteTasks: Task[] = [];
-  const completeTasks: Task[] = [];
-
-  for (const task of tasks) {
-    if (task.isComplete) {
-      completeTasks.push(task);
-    } else if (task.dueDate && new Date(task.dueDate) < new Date()) {
+  // Mark past due tasks
+  tasksCopy.forEach((task) => {
+    if (task.dueDate && !task.isComplete && new Date(task.dueDate) < now) {
       task.isPastDue = true;
-      pastDueTasks.push(task);
     } else {
       task.isPastDue = false;
-      incompleteTasks.push(task);
     }
-  }
+  });
 
-  return [...pastDueTasks, ...incompleteTasks, ...completeTasks];
+  return tasksCopy.sort((a, b) => {
+    // First, separate by completion status (incomplete first)
+    if (a.isComplete !== b.isComplete) {
+      return a.isComplete ? 1 : -1;
+    }
+
+    // For incomplete tasks, put overdue first
+    if (!a.isComplete && !b.isComplete) {
+      if (a.isPastDue !== b.isPastDue) {
+        return a.isPastDue ? -1 : 1;
+      }
+    }
+
+    // // Within each category, sort by due date
+    // if (a.dueDate && b.dueDate) {
+    //   return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    // }
+
+    // Put tasks without due dates last within their category
+    if (a.dueDate && !b.dueDate) return -1;
+    if (!a.dueDate && b.dueDate) return 1;
+
+    return 0;
+  });
 };
 
 const TaskList = ({ tasks, updateTask }: TaskListProps) => {
